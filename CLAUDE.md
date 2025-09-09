@@ -1,0 +1,137 @@
+# NhacLich Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-09-09
+
+## Active Technologies
+- Ruby 3.3+ + Rails 8.0 with Solid Stack (001-lunar-reminders-app)
+- PostgreSQL 16+ with JSONB for lunar calendar data
+- PWA (Progressive Web App) with Service Worker, Web App Manifest
+- Hotwire (Turbo + Stimulus) with FullCalendar JS
+- Tailwind CSS for modern UI/UX
+- Solid Stack: Solid Queue, Solid Cache, Solid Cable (zero external dependencies)
+- IndexedDB for offline PWA data storage
+
+## Project Structure
+```
+app/
+├── models/              # ActiveRecord models with JSONB for lunar dates
+├── controllers/         # Rails controllers with Hotwire integration
+├── views/               # ERB templates with Turbo frames
+├── javascript/          # Stimulus controllers + FullCalendar + Service Worker
+├── stylesheets/         # Tailwind CSS
+├── jobs/                # Solid Queue background jobs
+└── pwa/                 # PWA assets (manifest, icons, service worker)
+
+config/
+├── application.rb       # Rails 8 + Solid Stack configuration
+├── routes.rb           # RESTful routes + calendar endpoints
+└── database.yml        # PostgreSQL configuration
+
+spec/                   # RSpec tests
+├── models/
+├── controllers/
+├── features/           # Capybara integration tests
+└── jobs/               # Background job tests
+
+db/
+├── migrate/            # Rails migrations + Solid Stack tables
+└── seeds.rb            # Sample lunar calendar data
+```
+
+## Commands
+```bash
+# Development
+rails server                              # Start with Solid Stack
+rails solid_queue:dashboard              # Monitor background jobs
+rails test                               # Run Rails 8 test suite
+bundle exec rspec                        # RSpec testing
+
+# Database
+rails db:create db:migrate db:seed       # Setup PostgreSQL
+rails db:rollback                        # Safe rollback with Rails 8
+
+# Solid Stack
+rails solid_queue:check                  # Verify job queue
+rails solid_cache:clear                  # Clear cache
+rails runner "Rails.cache.stats"         # Cache statistics
+
+# Code Quality  
+rubocop -A                               # Ruby style fixes
+yarn lint                                # JavaScript linting
+
+# PWA
+npx lighthouse http://localhost:3000 --only-categories=pwa  # PWA audit
+rails routes | grep pwa                  # Check PWA routes
+```
+
+## Code Style
+- **Ruby**: Follow Rails 8 conventions, use built-in authentication
+- **JavaScript**: ES6+ with Stimulus controllers, minimal external dependencies
+- **CSS**: Tailwind utility-first approach
+- **Database**: PostgreSQL-first design, leverage JSONB for flexible data
+- **Background Jobs**: Solid Queue with retry strategies
+- **Testing**: RSpec for Ruby, Rails test suite for integration
+
+## Rails 8 Specific Guidelines
+
+### Authentication
+- Use `rails generate authentication` for email/password foundation
+- Google OAuth integration with `omniauth-google-oauth2` gem
+- Support both authentication methods with account linking
+- Leverage Rails 8 built-in password reset and confirmation (for password auth)
+- Session management through Rails 8 session system
+- OAuth token storage for Google Calendar API integration
+
+### Solid Stack Usage
+- **Solid Queue**: All background jobs (notifications, recurring events)
+- **Solid Cache**: Session storage, calendar view caching, lunar date calculations
+- **Solid Cable**: Real-time calendar updates, family collaboration notifications
+- Single PostgreSQL database for all persistence needs
+
+### Performance Optimizations
+- Use Rails 8 enhanced JSONB queries for lunar date operations
+- Leverage PostgreSQL GIN indexes for JSONB fields
+- Cache lunar calendar conversions with Solid Cache
+- Precompute recurring events with Solid Queue jobs
+
+### Hotwire Integration
+- Use Turbo morphing for calendar view updates
+- Stimulus controllers for FullCalendar integration
+- Turbo frames for event creation/editing modals
+- Real-time updates via Solid Cable WebSockets
+
+### PWA Implementation
+- **Service Worker**: Cache-first strategy for offline functionality
+- **Web App Manifest**: App metadata, icons, and installation configuration
+- **IndexedDB**: Client-side storage for offline events and lunar calendar data
+- **Background Sync**: Sync offline changes when connectivity restored
+- **Push Notifications**: WebPush integration with Solid Queue notification system
+- **Offline-First Design**: App functions completely offline with sync when online
+
+## Recent Changes
+- 001-lunar-reminders-app: Added Rails 8.0 + Solid Stack + PWA for offline-capable lunar calendar app
+
+## Feature Context: Lunar Reminders App
+Current feature focuses on:
+- Lunar-to-gregorian calendar conversion with accurate leap month handling
+- Multi-channel notifications (email, SMS, push, Zalo OA)
+- Family collaboration with role-based permissions (Owner/Editor/Viewer)
+- Calendar export/import (ICS, CSV, JSON) with external calendar sync
+- Expense tracking for ceremony events
+- Real-time calendar updates using Solid Cable
+- **PWA Features**: Offline calendar access, installable app, push notifications, background sync
+- **Cross-platform**: iOS, Android, desktop PWA installation
+- **Offline-first**: Complete functionality without internet connection
+
+## Development Workflow
+1. Use TDD with RSpec for all new features
+2. Write failing tests first (RED phase)
+3. Implement minimum code to pass tests (GREEN phase)
+4. Refactor while keeping tests green (REFACTOR phase)
+5. Use Rails 8 generators for authentication and scaffolding
+6. Leverage Solid Stack for background processing and caching
+7. Deploy with Kamal 2.0 for zero-downtime production deployments
+
+<!-- MANUAL ADDITIONS START -->
+<!-- Add any manual context here that shouldn't be overwritten -->
+<!-- MANUAL ADDITIONS END -->

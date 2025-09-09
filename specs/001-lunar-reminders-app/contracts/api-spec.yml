@@ -1,0 +1,1243 @@
+openapi: 3.0.3
+info:
+  title: Lunar Reminders App PWA API
+  version: 1.0.0
+  description: Rails 8 + Solid Stack + PWA API for managing lunar calendar events with offline capabilities
+  
+servers:
+  - url: https://api.lunarreminders.com/v1
+    description: Production server
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+paths:
+  # Authentication
+  /auth/login:
+    post:
+      summary: User authentication with email/password
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/google:
+    get:
+      summary: Initiate Google OAuth authentication
+      tags: [Authentication]
+      parameters:
+        - name: redirect_uri
+          in: query
+          schema:
+            type: string
+            format: uri
+          description: Where to redirect after successful authentication
+      responses:
+        '302':
+          description: Redirect to Google OAuth
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+
+  /auth/google/callback:
+    get:
+      summary: Google OAuth callback
+      tags: [Authentication]
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful OAuth authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: OAuth error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  error_description:
+                    type: string
+
+  /auth/link-google:
+    post:
+      summary: Link Google account to existing user
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [google_code]
+              properties:
+                google_code:
+                  type: string
+                  description: Google OAuth authorization code
+      responses:
+        '200':
+          description: Account linked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '409':
+          description: Google account already linked to another user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Google account already linked"
+
+  /auth/unlink-google:
+    delete:
+      summary: Unlink Google account from user
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Google account unlinked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Cannot unlink only authentication method
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  # Users
+  /users:
+    post:
+      summary: Create user account
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/{id}:
+    get:
+      summary: Get user profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    patch:
+      summary: Update user profile
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # Families
+  /families:
+    get:
+      summary: List user's families
+      tags: [Families]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of families
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Family'
+    
+    post:
+      summary: Create a new family
+      tags: [Families]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FamilyCreate'
+      responses:
+        '201':
+          description: Family created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
+
+  /families/{id}/members:
+    post:
+      summary: Invite family member
+      tags: [Families]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FamilyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [editor, viewer]
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+
+  # Events
+  /events:
+    get:
+      summary: List events
+      tags: [Events]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: family_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_type
+          in: query
+          schema:
+            type: string
+            enum: [lunar, gregorian]
+      responses:
+        '200':
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+    
+    post:
+      summary: Create a new event
+      tags: [Events]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreate'
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /events/{id}:
+    get:
+      summary: Get event details
+      tags: [Events]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetail'
+    
+    patch:
+      summary: Update event
+      tags: [Events]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventUpdate'
+      responses:
+        '200':
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+    
+    delete:
+      summary: Delete event
+      tags: [Events]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '204':
+          description: Event deleted successfully
+
+  /events/{id}/reminders:
+    get:
+      summary: List event reminders
+      tags: [Reminders]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: List of reminders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reminder'
+    
+    post:
+      summary: Create event reminder
+      tags: [Reminders]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReminderCreate'
+      responses:
+        '201':
+          description: Reminder created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+
+  # Calendar Export/Import
+  /calendar/export:
+    get:
+      summary: Export calendar as ICS
+      tags: [Calendar]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: family_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: event_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ICS calendar data
+          content:
+            text/calendar:
+              schema:
+                type: string
+                format: binary
+
+  /calendar/import:
+    post:
+      summary: Import calendar from ICS
+      tags: [Calendar]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                family_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Calendar imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported_count:
+                    type: integer
+                  skipped_count:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+
+  # Solid Stack Monitoring (Rails 8)
+  /admin/solid_queue/dashboard:
+    get:
+      summary: Solid Queue dashboard for job monitoring
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/solid_queue/jobs:
+    get:
+      summary: List background jobs
+      tags: [Admin] 
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed]
+      responses:
+        '200':
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    class_name:
+                      type: string
+                    status:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+                    finished_at:
+                      type: string
+                      format: date-time
+
+  # PWA Features
+  /pwa/manifest.json:
+    get:
+      summary: PWA Web App Manifest
+      tags: [PWA]
+      responses:
+        '200':
+          description: Web App Manifest for PWA installation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "Lunar Reminders"
+                  short_name:
+                    type: string
+                    example: "LunarCal"
+                  description:
+                    type: string
+                  start_url:
+                    type: string
+                    example: "/"
+                  display:
+                    type: string
+                    enum: [standalone, fullscreen, minimal-ui]
+                  theme_color:
+                    type: string
+                    example: "#4F46E5"
+                  background_color:
+                    type: string
+                    example: "#FFFFFF"
+                  icons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        src:
+                          type: string
+                        sizes:
+                          type: string
+                        type:
+                          type: string
+
+  /pwa/offline-sync:
+    post:
+      summary: Sync offline changes when connection restored
+      tags: [PWA]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/EventCreate'
+                last_sync:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Sync completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced_count:
+                    type: integer
+                  conflicts:
+                    type: array
+                    items:
+                      type: object
+                  server_updates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+
+  /pwa/push-subscription:
+    post:
+      summary: Register PWA push notification subscription
+      tags: [PWA]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+                keys:
+                  type: object
+                  properties:
+                    p256dh:
+                      type: string
+                    auth:
+                      type: string
+      responses:
+        '201':
+          description: Push subscription registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+
+    delete:
+      summary: Unregister PWA push notification subscription
+      tags: [PWA]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Push subscription removed
+
+  /pwa/offline-data:
+    get:
+      summary: Get data for offline PWA functionality
+      tags: [PWA]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: last_updated
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: family_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Offline data package
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  lunar_calendar_data:
+                    type: object
+                    description: Precomputed lunar dates for next 2 years
+                  family_members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  last_updated:
+                    type: string
+                    format: date-time
+
+  # Lunar Calendar Conversion
+  /lunar-calendar/convert:
+    post:
+      summary: Convert between lunar and gregorian dates
+      tags: [Lunar Calendar]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, from_type]
+              properties:
+                date:
+                  type: string
+                  format: date
+                from_type:
+                  type: string
+                  enum: [lunar, gregorian]
+                lunar_date:
+                  $ref: '#/components/schemas/LunarDate'
+      responses:
+        '200':
+          description: Date conversion result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DateConversion'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    
+    FamilyId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    
+    EventId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # Authentication
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    # User schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        phone:
+          type: string
+        locale:
+          type: string
+          enum: [en, vi]
+        timezone:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        auth_method:
+          type: string
+          enum: [password, google, both]
+        google_connected:
+          type: boolean
+          description: Whether Google account is linked
+        confirmed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    UserCreate:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+        locale:
+          type: string
+          enum: [en, vi]
+          default: en
+        timezone:
+          type: string
+          default: UTC
+    
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+        locale:
+          type: string
+          enum: [en, vi]
+        timezone:
+          type: string
+
+    # Family schemas
+    Family:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        settings:
+          type: object
+        member_count:
+          type: integer
+        user_role:
+          type: string
+          enum: [owner, editor, viewer]
+        created_at:
+          type: string
+          format: date-time
+    
+    FamilyCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+
+    Membership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/User'
+        family_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+        joined_at:
+          type: string
+          format: date-time
+
+    # Event schemas
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        date_type:
+          type: string
+          enum: [lunar, gregorian]
+        date_value:
+          type: string
+          format: date
+        lunar_date:
+          $ref: '#/components/schemas/LunarDate'
+        recurrence:
+          type: string
+          enum: [none, monthly, yearly]
+        all_day:
+          type: boolean
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        tags:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: [private, family, public]
+        created_at:
+          type: string
+          format: date-time
+    
+    EventCreate:
+      type: object
+      required: [title, date_type, date_value]
+      properties:
+        title:
+          type: string
+          minLength: 3
+        description:
+          type: string
+        location:
+          type: string
+        family_id:
+          type: string
+          format: uuid
+        date_type:
+          type: string
+          enum: [lunar, gregorian]
+        date_value:
+          type: string
+          format: date
+        lunar_date:
+          $ref: '#/components/schemas/LunarDate'
+        recurrence:
+          type: string
+          enum: [none, monthly, yearly]
+          default: none
+        all_day:
+          type: boolean
+          default: true
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        tags:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: [private, family, public]
+          default: family
+    
+    EventUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+        description:
+          type: string
+        location:
+          type: string
+        date_value:
+          type: string
+          format: date
+        recurrence:
+          type: string
+          enum: [none, monthly, yearly]
+        all_day:
+          type: boolean
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        tags:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: [private, family, public]
+    
+    EventDetail:
+      allOf:
+        - $ref: '#/components/schemas/Event'
+        - type: object
+          properties:
+            reminders:
+              type: array
+              items:
+                $ref: '#/components/schemas/Reminder'
+            expenses:
+              type: array
+              items:
+                $ref: '#/components/schemas/Expense'
+            next_occurrences:
+              type: array
+              items:
+                type: string
+                format: date
+
+    # Reminder schemas
+    Reminder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        lead_time_value:
+          type: integer
+          minimum: 1
+        lead_time_unit:
+          type: string
+          enum: [days, weeks, months]
+        notify_time:
+          type: string
+          format: time
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [email, sms, push, zalo]
+        enabled:
+          type: boolean
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+        created_at:
+          type: string
+          format: date-time
+    
+    ReminderCreate:
+      type: object
+      required: [lead_time_value, lead_time_unit, channels]
+      properties:
+        lead_time_value:
+          type: integer
+          minimum: 1
+          maximum: 180
+        lead_time_unit:
+          type: string
+          enum: [days, weeks, months]
+        notify_time:
+          type: string
+          format: time
+          default: "07:00"
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [email, sms, push, zalo]
+          minItems: 1
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipientCreate'
+
+    Recipient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        group_name:
+          type: string
+    
+    RecipientCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        group_name:
+          type: string
+
+    # Expense schema
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        item:
+          type: string
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        category:
+          type: string
+        note:
+          type: string
+        expense_date:
+          type: string
+          format: date
+        receipt_url:
+          type: string
+          format: uri
+
+    # Lunar calendar schemas
+    LunarDate:
+      type: object
+      properties:
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        day:
+          type: integer
+          minimum: 1
+          maximum: 30
+        leap_month:
+          type: boolean
+          default: false
+        cycle_year:
+          type: integer
+    
+    DateConversion:
+      type: object
+      properties:
+        original_date:
+          type: string
+          format: date
+        original_type:
+          type: string
+          enum: [lunar, gregorian]
+        converted_date:
+          type: string
+          format: date
+        converted_type:
+          type: string
+          enum: [lunar, gregorian]
+        lunar_date:
+          $ref: '#/components/schemas/LunarDate'
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Authentication required"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Resource not found"
+    
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string

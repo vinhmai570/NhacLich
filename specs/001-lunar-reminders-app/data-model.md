@@ -1,7 +1,20 @@
 # Data Model: Lunar Reminders App
 
-**Date**: 2025-09-09  
+**Date**: 2025-09-09
 **Phase**: 1 - Data Model Design (Rails 8 + Solid Stack)
+
+## Related Implementation Tasks
+- **User entity**: T030 (model), T042 (migration) → Lines 22-70
+- **Family entity**: T031 (model), T043 (migration) → Lines 72-102
+- **Membership entity**: T032 (model), T044 (migration) → Lines 104-126
+- **Person/PersonRelationship**: T037-T038 (models), T048 (migration) → Lines 128-166
+- **Event entity**: T033 (model), T045 (migration) → Lines 168-212
+- **Reminder/Recipient**: T034-T035 (models), T046 (migration) → Lines 214-256
+- **Expense entity**: T036 (model), T047 (migration) → Lines 258-281
+- **IntegrationAccount**: T039 (model), T049 (migration) → Lines 282-304
+- **AuditLog entity**: T041 (model), T050 (migration) → Lines 306-328
+- **Session entity (Rails 8)**: T040 (model) → Lines 330-342
+- **Database constraints & indexes**: T051 (performance migration) → Lines 377-423
 
 ## Entity Relationships
 

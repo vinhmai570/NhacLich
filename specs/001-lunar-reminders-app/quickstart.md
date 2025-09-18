@@ -1,8 +1,20 @@
 # Quickstart Guide: Lunar Reminders App
 
-**Date**: 2025-09-09  
-**Phase**: 1 - Integration Test Scenarios (Rails 8 + Solid Stack)  
+**Date**: 2025-09-09
+**Phase**: 1 - Integration Test Scenarios (Rails 8 + Solid Stack)
 **Purpose**: Executable validation scenarios for core user stories
+
+## Related Integration Tests & Implementation Tasks
+- **Story 1: Memorial Event** (Lines 103-132) → T022 (integration test), T033/T034/T045/T052 (implementation)
+- **Story 2: Monthly Rituals** (Lines 153-177) → T023 (integration test), T033/T054/T053 (implementation)
+- **Story 3: Long-term Planning** (Lines 178-202) → T024 (integration test), T034/T035/T053 (implementation)
+- **Story 4: Family Collaboration** (Lines 204-227) → T025 (integration test), T031/T032/T080 (implementation)
+- **Story 5: Calendar Export** (Lines 229-262) → T026 (integration test), T055/T017 (implementation)
+- **Story 6: PWA Installation** (Lines 265-294) → T027 (integration test), T071/T072/T073/T074 (implementation)
+- **Story 7: PWA Notifications** (Lines 297-328) → T028 (integration test), T075/T053 (implementation)
+- **Story 8: Google OAuth** (Lines 329-372) → T029 (integration test), T030/T077/T056 (implementation)
+- **Accuracy Tests** (Lines 375-380) → Lunar calendar validation for T052 (LunarCalendarService)
+- **Performance Tests** (Lines 403-409) → Benchmarks for all implementation tasks
 
 ## Prerequisites
 

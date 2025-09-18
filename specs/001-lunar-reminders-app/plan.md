@@ -200,6 +200,41 @@ ios/ or android/
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
+## Implementation Sequence Map
+*Cross-references between phases and detailed documentation*
+
+### Phase 3.2 Tests (T007-T029) → Detail Sources:
+- **Contract tests**: `contracts/api-spec.yml` endpoints - each endpoint maps to specific test task
+- **Integration tests**: `quickstart.md:103-372` user stories - each story validates implementation tasks
+- **CRITICAL**: Must complete and FAIL before Phase 3.3 (TDD workflow enforced)
+
+### Phase 3.3 Models (T030-T051) → Detail Sources:
+- **Entity specifications**: `data-model.md:20-342` - complete field definitions, validations, relationships
+- **Database design**: `data-model.md:344-423` - indexes, constraints, performance optimizations
+- **Required for**: Services in Phase 3.4 depend on model completion
+
+### Phase 3.4 Services (T052-T061) → Detail Sources:
+- **Service decisions**: `research.md:7-311` - technology choices and implementation approaches
+- **Implementation patterns**: `data-model.md` relationships guide service interactions
+- **API integration**: `contracts/api-spec.yml` schemas define service interfaces
+
+### Phase 3.5 Controllers (T062-T070) → Detail Sources:
+- **API contracts**: `contracts/api-spec.yml` - exact request/response specifications
+- **Authorization**: `data-model.md:105-126` (Membership roles) guides Pundit policies
+- **Test validation**: Integration tests T022-T029 validate controller behavior
+
+### Phase 3.6 Frontend/PWA (T071-T079) → Detail Sources:
+- **PWA features**: `research.md:219-280` - offline strategy, service worker implementation
+- **User journeys**: `quickstart.md:103-372` - test scenarios validate frontend behavior
+- **API integration**: Controllers T062-T070 provide data endpoints
+
+### Phase 3.4 Implementation Refinements → Critical Missing Elements:
+- **Controllers (T062-T070)**: Each requires endpoint mapping to `contracts/api-spec.yml`, authentication integration, service dependencies, and JSON serialization
+- **Background Jobs (T058-T061)**: Each requires perform method signature, error handling, retry strategies, and database interaction patterns
+- **Routes Configuration**: Missing task for config/routes.rb mapping all 25+ API endpoints from contracts
+- **JSON Serializers**: Missing tasks for API response formatting (UserSerializer, EventSerializer, etc.)
+- **View Layer Integration**: T078 requires detailed Turbo Frame implementation with controller integration
+
 ## Phase 3+: Future Implementation
 *These phases are beyond the scope of the /plan command*
 

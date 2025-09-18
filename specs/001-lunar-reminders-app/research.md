@@ -3,6 +3,19 @@
 **Date**: 2025-09-09
 **Phase**: 0 - Research & Analysis (Updated for Rails 8 + Solid Stack)
 
+## Related Implementation Tasks
+- **Lunar Calendar**: T052 (LunarCalendarService), T018 (conversion contract test) → Lines 8-26
+- **Notifications**: T053 (NotificationService), T058 (delivery jobs) → Lines 28-46
+- **Calendar Integration**: T055 (CalendarExportService), T056 (GoogleCalendarSyncService) → Lines 48-66
+- **Frontend Calendar**: T076 (FullCalendar integration) → Lines 68-86
+- **Family Collaboration**: T031-T032 (Family/Membership models), T080 (Pundit policies) → Lines 87-105
+- **Expense Tracking**: T036 (Expense model) → Lines 107-126
+- **Rails 8 Solid Stack**: T001 (Rails app setup), T058-T061 (background jobs) → Lines 129-155
+- **Rails 8 Features**: T006 (authentication generation), T030 (User model) → Lines 157-177
+- **Testing Strategy**: All test tasks T007-T029 → Lines 179-199
+- **PWA Implementation**: T071-T075 (PWA services), T019-T020 (PWA contract tests) → Lines 219-280
+- **Authentication Strategy**: T030 (User model), T077 (OAuth controller) → Lines 283-310
+
 ## Research Areas
 
 ### 1. Lunar Calendar Conversion Library
